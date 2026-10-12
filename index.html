@@ -402,9 +402,13 @@ function chips(box,list,cur,onPick){
   list.forEach(([k,label])=>{const b=document.createElement('button');b.className='chip'+(k===cur?' on':'');b.textContent=label;
     b.onclick=()=>{onPick(k);[...box.children].forEach(x=>x.classList.toggle('on',x===b));renderBest();};box.appendChild(b);});
 }
+function flagsWait(n){ // 1 прапор чекає, 3 прапори чекають, 25 прапорів чекають
+  const a=n%10,b=n%100,w=a===1&&b!==11?'прапор чекає':a>=2&&a<=4&&(b<12||b>14)?'прапори чекають':'прапорів чекають';
+  return n+' '+w+' на тебе!';
+}
 function renderBest(){
   const best=load('best',{}),k=st.region+'|'+st.mode,n=Math.min(10,poolFor(st.region).length);
-  $('bestLine').textContent=best[k]!=null?('Твій рекорд тут: '+best[k]+' з '+n+' ⭐'):(poolFor(st.region).length+' прапорів чекають на тебе!');
+  $('bestLine').textContent=best[k]!=null?('Твій рекорд тут: '+best[k]+' з '+n+' ⭐'):flagsWait(poolFor(st.region).length);
 }
 function renderHome(){
   chips($('regChips'),REG,st.region,k=>{st.region=k;save('region',k);});
