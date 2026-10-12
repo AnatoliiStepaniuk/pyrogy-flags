@@ -246,6 +246,23 @@ def('jm','Ямайка','am',1/2,(c,w,h)=>{const G='#009B3A',K='#000000';poly(c,
 def('cu','Куба','am',1/2,(c,w,h)=>{hs(c,w,h,['#002A8F',W_,'#002A8F',W_,'#002A8F']);poly(c,'#CF142B',[[0,0],[h*0.866,h/2],[0,h]]);star(c,W_,h*0.866/3,h/2,h*0.15);});
 def('pa','Панама','am',2/3,(c,w,h)=>{const B='#005293',R='#D21034';rect(c,W_,0,0,w,h);rect(c,R,w/2,0,w/2,h/2);rect(c,B,0,h/2,w/2,h/2);
   star(c,B,w/4,h/4,h/8);star(c,R,3*w/4,3*h/4,h/8);});
+def('mx','Мексика','am',4/7,(c,w,h)=>{const G='#006847',R='#CE1126',E='#8C5A2B';vs(c,w,h,[G,W_,R]);
+  const u=h/100,x0=w/2,y0=h/2,X=([x,y])=>[x0+x*u,y0+y*u],
+    el=(col,x,y,rx,ry,a)=>{c.fillStyle=col;c.beginPath();c.ellipse(x0+x*u,y0+y*u,rx*u,ry*u,a||0,0,Math.PI*2);c.fill();};
+  // вінок
+  c.strokeStyle=G;c.lineWidth=2.2*u;c.beginPath();c.arc(x0,y0,22*u,-0.08*Math.PI,1.08*Math.PI);c.stroke();
+  for(let i=0;i<=12;i++){const a=-0.08*Math.PI+i*1.16*Math.PI/12,r=22+(i%2?2:-2);el(G,Math.cos(a)*r,Math.sin(a)*r,3.2,1.4,a+Math.PI/2);}
+  // кактус з плодами
+  el(G,0,13,5,7);el(G,-7,9,3.5,5,-0.6);el(G,7,10,3.5,5,0.6);
+  [[-9,4.5],[-4,6.5],[9,5.5],[3,6]].forEach(([x,y])=>circ(c,R,x0+x*u,y0+y*u,1.3*u));
+  // орел зі змією
+  poly(c,E,[[3,-6],[10,-20],[13,-16],[16,-21],[18,-15],[21,-16],[19,-9],[22,-8],[16,-3],[8,1]].map(X));
+  poly(c,E,[[-1,-8],[-6,-21],[-3,-18],[-2,-22],[1,-16],[3,-9]].map(X));
+  poly(c,E,[[4,6],[12,12],[9,13],[3,10]].map(X));
+  el(E,1,-1,7,9.5,-0.35);el(E,-6,-11,4,3.8);
+  poly(c,E,[[-9,-12],[-13.5,-10],[-9,-9.5]].map(X));
+  c.strokeStyle=G;c.lineWidth=1.5*u;c.lineCap='round';c.beginPath();c.moveTo(...X([-12.5,-9.5]));
+  c.bezierCurveTo(...X([-17,-4]),...X([-8,-3]),...X([-12,2]));c.stroke();});
 
 // Африка
 def('ng','Нігерія','af',1/2,(c,w,h)=>vs(c,w,h,['#008751',W_,'#008751']));
