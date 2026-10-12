@@ -46,6 +46,7 @@ h1 .p{color:#ff6a2b}
 .opt.bad{border-color:var(--bad);background:#ffeaea}
 .opt:disabled{cursor:default;color:var(--ink)}
 .opt.gone{opacity:.22}
+.opt span{overflow-wrap:anywhere}
 .hint{display:block;margin:12px auto 0;border:3px solid #ffd36b;background:#fff8dc;border-radius:999px;padding:8px 16px;font:inherit;font-weight:900;font-size:17px;color:var(--ink);cursor:pointer}
 .hint:disabled{opacity:.45;cursor:default}
 .reveal{text-align:center;margin-top:12px}
@@ -73,13 +74,15 @@ h1 .p{color:#ff6a2b}
 
 <section id="home">
   <h1>Pyrogy <span class="p">Flags</span> 🥧</h1>
-  <p class="sub">Вгадай країну за пирогом з кольорів її прапора!</p>
+  <p class="sub">Вгадай країну чи штат за пирогом з кольорів прапора!</p>
   <div class="card demo">
     <canvas id="demoPie"></canvas><span class="eq">=</span><span id="demoFlag"></span>
     <div class="how">Кожен пиріг спечено з прапора. Що більше якогось кольору на прапорі, то більший шматок. На шматках написано відсотки. Вгадай, чий це прапор!</div>
   </div>
   <div class="card">
-    <div class="label">Де шукаємо?</div>
+    <div class="label">Що вгадуємо?</div>
+    <div class="chips" id="kindChips"></div>
+    <div class="label" style="margin-top:14px">Де шукаємо?</div>
     <div class="chips" id="regChips"></div>
     <div class="label" style="margin-top:14px">Рівень</div>
     <div class="chips" id="modeChips"></div>
@@ -98,7 +101,7 @@ h1 .p{color:#ff6a2b}
     <button class="tb" id="sndBtn" title="Звук">🔊</button>
   </div>
   <div class="bar"><i id="barFill"></i></div>
-  <p class="q">Якої країни цей пиріг? 🥧</p>
+  <p class="q" id="qText">Якої країни цей пиріг? 🥧</p>
   <div class="pieBox"><canvas id="pie"></canvas></div>
   <div class="opts" id="opts"></div>
   <button class="hint" id="hintBtn">💡 Підказка</button>
@@ -468,7 +471,275 @@ def('sb','Соломонові Острови','oc',1/2,(c,w,h)=>{poly(c,'#0051B
 def('tv','Тувалу','oc',1/2,(c,w,h)=>{rect(c,'#009FCA',0,0,w,h);uj(c,0,0,w/2,h/2);
   [[0.6,0.4],[0.68,0.7],[0.74,0.2],[0.8,0.88],[0.84,0.5],[0.89,0.74],[0.92,0.12],[0.94,0.34],[0.96,0.58]].forEach(([x,y])=>star(c,'#FFCE00',x*w,y*h,0.05*h));});
 
+// ---------- штати і регіони ----------
+function txt(c,col,s,x,y,size){c.fillStyle=col;c.font='900 '+size+'px Arial, Helvetica, sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(s,x,y);}
+const LION=[[-0.35,-0.95],[-0.15,-0.98],[0,-0.85],[0.05,-0.65],[0.2,-0.55],[0.3,-0.3],[0.32,0],[0.45,0.2],[0.6,0.1],[0.7,-0.3],[0.62,-0.6],[0.75,-0.65],[0.85,-0.3],[0.75,0.2],
+  [0.55,0.4],[0.4,0.5],[0.45,0.75],[0.6,0.85],[0.6,0.98],[0.25,0.98],[0.2,0.75],[0.05,0.6],[-0.1,0.75],[-0.05,0.9],[-0.3,0.98],[-0.35,0.8],[-0.2,0.45],[-0.15,0.15],[-0.3,0],
+  [-0.6,-0.1],[-0.75,-0.05],[-0.7,-0.2],[-0.45,-0.25],[-0.35,-0.35],[-0.6,-0.45],[-0.75,-0.4],[-0.7,-0.55],[-0.45,-0.6],[-0.4,-0.7],[-0.55,-0.75],[-0.5,-0.88]];
+function lionPath(c,cx,cy,s){c.beginPath();LION.forEach(([x,y],i)=>i?c.lineTo(cx+x*s,cy+y*s):c.moveTo(cx+x*s,cy+y*s));c.closePath();}
+function lion(c,col,cx,cy,s){c.fillStyle=col;lionPath(c,cx,cy,s);c.fill();} // лев на задніх лапах
+function stripedLion(c,a,b,cx,cy,s,n){c.save();lionPath(c,cx,cy,s);c.clip();for(let i=0;i<n;i++)rect(c,i%2?b:a,cx-s,cy-s+i*2*s/n,2*s,2*s/n+1);c.restore();}
+function clipCirc(c,cx,cy,r,fn){c.save();c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.clip();fn();c.restore();}
+function figure(c,col,x,y,h){rect(c,col,x-0.03*h,y-0.12*h,0.06*h,0.26*h);circ(c,'#E8C7A0',x,y-0.15*h,0.028*h);} // людина з герба
+const UB='#002868',UR='#BF0A30',UY='#FFD700',SKY='#8FC5E8',GR='#3A7D2C',BR='#6B4423';
+
+// Штати США
+def('us-al','Алабама','us',2/3,(c,w,h)=>{rect(c,W_,0,0,w,h);line(c,'#AF002A',0.17*h,[[0,0],[w,h]]);line(c,'#AF002A',0.17*h,[[w,0],[0,h]]);});
+def('us-ak','Аляска','us',66/125,(c,w,h)=>{const Y='#FFB611';rect(c,'#0F204B',0,0,w,h);
+  [[0.11,0.55],[0.22,0.53],[0.32,0.6],[0.42,0.69],[0.44,0.86],[0.6,0.86],[0.62,0.66]].forEach(([x,y])=>star(c,Y,x*w,y*h,0.045*h));star(c,Y,0.84*w,0.2*h,0.085*h);});
+def('us-az','Аризона','us',2/3,(c,w,h)=>{const cx=w/2,cy=h/2;rect(c,UB,0,0,w,h);c.save();c.beginPath();c.rect(0,0,w,h/2);c.clip();
+  for(let i=0;i<13;i++){const a0=Math.PI+i*Math.PI/13;c.fillStyle=i%2?'#FEBE10':UR;c.beginPath();c.moveTo(cx,cy);c.arc(cx,cy,2*w,a0,a0+Math.PI/13);c.closePath();c.fill();}
+  c.restore();star(c,'#CE5C17',cx,cy,0.25*h);});
+def('us-ar','Арканзас','us',2/3,(c,w,h)=>{const cx=w/2,cy=h/2,a=0.33*w,b=0.42*h,D=k=>[[cx,cy-b*k],[cx+a*k,cy],[cx,cy+b*k],[cx-a*k,cy]];
+  rect(c,UR,0,0,w,h);poly(c,UB,D(1));poly(c,W_,D(0.8));
+  for(let i=0;i<24;i++){const t=i/24*4,s=Math.floor(t),f=t-s,P=D(0.9),p=P[s],q=P[(s+1)%4];star(c,W_,p[0]+(q[0]-p[0])*f,p[1]+(q[1]-p[1])*f,0.022*h);}
+  txt(c,UB,'ARKANSAS',cx,cy,0.085*h);star(c,UB,cx,cy-0.17*h,0.05*h);[[-0.075,0.14],[0.075,0.14],[0,0.22]].forEach(([dx,dy])=>star(c,UB,cx+dx*h,cy+dy*h,0.045*h));});
+def('us-ca','Каліфорнія','us',2/3,(c,w,h)=>{const R=UR,u=h/100,X=([x,y])=>[w/2-x*u,0.42*h+y*u];rect(c,W_,0,0,w,h);rect(c,R,0,0.83*h,w,0.17*h);star(c,R,0.13*w,0.17*h,0.12*h);
+  ell(c,'#5E8F4A',w/2,0.6*h,0.22*w,0.03*h);
+  poly(c,'#6B3E1B',[[-28,0],[-24,-8],[-14,-12],[0,-14],[14,-15],[22,-12],[28,-6],[33,-6],[36,-2],[34,2],[28,3],[26,8],[24,16],[18,16],[18,8],[10,6],[0,7],[-10,6],[-14,16],[-20,16],[-20,6],[-26,6],[-28,14],[-34,14],[-32,4]].map(X));
+  txt(c,'#3B2210','CALIFORNIA REPUBLIC',w/2,0.73*h,0.085*h);});
+def('us-co','Колорадо','us',2/3,(c,w,h)=>{const cx=0.42*w,cy=h/2;hs(c,w,h,[UB,W_,UB]);circ(c,UY,cx,cy,0.2*h);
+  c.strokeStyle=UR;c.lineWidth=0.14*h;c.lineCap='butt';c.beginPath();c.arc(cx,cy,0.27*h,0.22*Math.PI,1.78*Math.PI);c.stroke();});
+def('us-ct','Коннектикут','us',2/3,(c,w,h)=>{const cx=w/2,cy=0.45*h;rect(c,'#0F2D69',0,0,w,h);
+  c.fillStyle=W_;c.beginPath();c.moveTo(cx-0.17*h,cy-0.22*h);c.quadraticCurveTo(cx,cy-0.27*h,cx+0.17*h,cy-0.22*h);c.lineTo(cx+0.17*h,cy+0.05*h);
+  c.quadraticCurveTo(cx+0.17*h,cy+0.22*h,cx,cy+0.27*h);c.quadraticCurveTo(cx-0.17*h,cy+0.22*h,cx-0.17*h,cy+0.05*h);c.closePath();c.fill();
+  [[-0.08,-0.05],[0,0.08],[0.08,-0.05]].forEach(([dx,dy])=>{line(c,GR,0.012*h,[[cx+dx*h,cy+(dy-0.09)*h],[cx+dx*h,cy+(dy+0.04)*h]]);
+    circ(c,'#6A2C91',cx+dx*h,cy+(dy+0.03)*h,0.025*h);ell(c,GR,cx+(dx+0.025)*h,cy+(dy-0.04)*h,0.025*h,0.015*h);});
+  rect(c,'#F2E2B3',cx-0.25*h,0.78*h,0.5*h,0.08*h);});
+def('us-de','Делавер','us',2/3,(c,w,h)=>{const Bf='#E5C99A',cx=w/2,cy=0.45*h;rect(c,'#1E3F8C',0,0,w,h);
+  poly(c,Bf,[[cx,cy-0.32*h],[cx+0.27*h,cy],[cx,cy+0.32*h],[cx-0.27*h,cy]]);
+  shield(c,'#D97B2B',cx-0.08*h,cy-0.1*h,0.16*h,0.2*h);rect(c,'#3D7DD8',cx-0.08*h,cy-0.035*h,0.16*h,0.05*h);txt(c,Bf,'DECEMBER 7, 1787',cx,0.88*h,0.07*h);});
+def('us-fl','Флорида','us',2/3,(c,w,h)=>{const cx=w/2,cy=h/2,r=0.16*h;rect(c,W_,0,0,w,h);line(c,UR,0.15*h,[[0,0],[w,h]]);line(c,UR,0.15*h,[[w,0],[0,h]]);
+  circ(c,'#D4A62A',cx,cy,0.2*h);circ(c,SKY,cx,cy,r);clipCirc(c,cx,cy,r,()=>{circ(c,UY,cx+0.08*h,cy-0.06*h,0.025*h);rect(c,GR,cx-0.2*h,cy+0.05*h,0.4*h,0.15*h);
+    rect(c,'#7A4A1E',cx-0.075*h,cy-0.08*h,0.015*h,0.14*h);[-0.6,-0.2,0.2,0.6,1].forEach(a=>ell(c,GR,cx-0.068*h+Math.cos(a-Math.PI/2)*0.04*h,cy-0.09*h+Math.sin(a-Math.PI/2)*0.04*h,0.045*h,0.012*h,a));});});
+def('us-ga','Джорджія','us',2/3,(c,w,h)=>{const s=2*h/3,Y='#D4AF37',cx=s/2,cy=s/2;hs(c,w,h,[UR,W_,UR]);rect(c,UB,0,0,s,s);
+  for(let i=0;i<13;i++){const a=-Math.PI/2+i*2*Math.PI/13;star(c,W_,cx+Math.cos(a)*0.27*h,cy+Math.sin(a)*0.27*h,0.03*h);}
+  c.strokeStyle=Y;c.lineWidth=0.02*h;c.beginPath();c.arc(cx,cy-0.03*h,0.1*h,Math.PI,2*Math.PI);c.stroke();
+  [-0.07,0,0.07].forEach(d=>rect(c,Y,cx+(d-0.01)*h,cy-0.04*h,0.02*h,0.12*h));rect(c,Y,cx-0.12*h,cy+0.08*h,0.24*h,0.025*h);});
+def('us-hi','Гаваї','us',1/2,(c,w,h)=>{hs(c,w,h,[W_,'#C8102E','#012169',W_,'#C8102E','#012169',W_,'#C8102E']);uj(c,0,0,w/2,h/2);});
+def('us-id','Айдахо','us',2/3,(c,w,h)=>{const cx=w/2,cy=0.45*h,r=0.23*h;rect(c,UB,0,0,w,h);circ(c,UY,cx,cy,0.27*h);circ(c,SKY,cx,cy,r);
+  clipCirc(c,cx,cy,r,()=>{poly(c,'#6E7F8C',[[cx-r,cy-0.02*h],[cx-0.12*h,cy-0.14*h],[cx,cy-0.05*h],[cx+0.1*h,cy-0.15*h],[cx+r,cy-0.02*h]]);rect(c,GR,cx-r,cy-0.02*h,2*r,r);});
+  rect(c,UR,cx-0.22*h,0.8*h,0.44*h,0.09*h);txt(c,UY,'STATE OF IDAHO',cx,0.845*h,0.055*h);});
+def('us-il','Іллінойс','us',3/5,(c,w,h)=>{const cx=w/2,cy=0.42*h;rect(c,W_,0,0,w,h);circ(c,'#F4A23B',cx+0.15*h,cy+0.12*h,0.12*h);ell(c,GR,cx,cy+0.22*h,0.32*h,0.06*h);
+  eagle1(c,BR,cx,cy,0.22*h);shield(c,W_,cx-0.05*h,cy-0.02*h,0.1*h,0.13*h);rect(c,UB,cx-0.05*h,cy-0.02*h,0.1*h,0.035*h);
+  [0.025,0.06].forEach(d=>rect(c,UR,cx-0.04*h,cy+d*h,0.08*h,0.015*h));txt(c,UB,'ILLINOIS',cx,0.83*h,0.12*h);});
+def('us-in','Індіана','us',2/3,(c,w,h)=>{const Y='#FFC72C',cx=w/2,cy=0.55*h;rect(c,UB,0,0,w,h);
+  rect(c,Y,cx-0.02*h,cy-0.05*h,0.04*h,0.22*h);poly(c,Y,[[cx-0.05*h,cy-0.06*h],[cx+0.05*h,cy-0.06*h],[cx,cy-0.18*h]]);
+  [-0.6,-0.3,0.3,0.6].forEach(a=>line(c,Y,0.012*h,[[cx+Math.sin(a)*0.1*h,cy-Math.cos(a)*0.1*h],[cx+Math.sin(a)*0.18*h,cy-Math.cos(a)*0.18*h]]));
+  for(let i=0;i<13;i++){const a=Math.PI*(0.75+i*1.5/12);star(c,Y,cx+Math.cos(a)*0.3*h,cy+Math.sin(a)*0.3*h,0.028*h);}
+  for(let i=0;i<5;i++){const a=Math.PI*(1.15+i*0.7/4);star(c,Y,cx+Math.cos(a)*0.22*h,cy+Math.sin(a)*0.22*h,0.028*h);}
+  star(c,Y,cx,0.13*h,0.045*h);txt(c,Y,'INDIANA',cx,0.05*h,0.065*h);});
+def('us-ia','Айова','us',2/3,(c,w,h)=>{const cx=w/2,cy=0.45*h;vs(c,w,h,[UB,W_,UR],[1,1.1,1]);eagle1(c,'#5A4632',cx,cy,0.13*h);
+  line(c,'#1F5FA8',0.03*h,[[cx-0.16*h,cy+0.05*h],[cx-0.05*h,cy+0.12*h],[cx+0.05*h,cy+0.12*h],[cx+0.16*h,cy+0.05*h]]);txt(c,UR,'IOWA',cx,0.75*h,0.11*h);});
+def('us-ks','Канзас','us',2/3,(c,w,h)=>{const cx=w/2,cy=0.5*h,r=0.164*h,Y='#FFC72C';rect(c,UB,0,0,w,h);
+  star(c,Y,cx,0.15*h,0.09*h,16,0.6);circ(c,BR,cx,0.15*h,0.04*h);line(c,Y,0.025*h,[[cx-0.12*h,0.26*h],[cx+0.12*h,0.26*h]]);
+  circ(c,Y,cx,cy,0.2*h);circ(c,SKY,cx,cy,r);clipCirc(c,cx,cy,r,()=>{circ(c,Y,cx,cy+0.02*h,0.06*h);rect(c,GR,cx-r,cy+0.02*h,2*r,r);});
+  txt(c,Y,'KANSAS',cx,0.83*h,0.12*h);});
+def('us-ky','Кентуккі','us',10/19,(c,w,h)=>{const cx=w/2,cy=0.45*h,G='#D4AF37';rect(c,UB,0,0,w,h);circ(c,G,cx,cy,0.25*h);circ(c,W_,cx,cy,0.2*h);
+  figure(c,'#7A4A1E',cx-0.045*h,cy+0.02*h,h*0.7);figure(c,'#1F3F79',cx+0.045*h,cy+0.02*h,h*0.7);
+  c.strokeStyle=G;c.lineWidth=0.025*h;c.beginPath();c.arc(cx,cy,0.31*h,0.15*Math.PI,0.85*Math.PI);c.stroke();});
+def('us-la','Луїзіана','us',2/3,(c,w,h)=>{const B='#002A86',cx=w/2,cy=0.42*h,u=h/100,X=([x,y])=>[cx+x*u,cy+y*u];rect(c,B,0,0,w,h);
+  poly(c,W_,[[-20,-6],[-8,-22],[-2,-16],[6,-24],[18,-8],[14,6],[-14,6]].map(X));ell(c,W_,cx,cy+4*u,13*u,9*u);circ(c,W_,cx,cy-12*u,5*u);
+  poly(c,W_,[[-2,-12],[2,-12],[0,4]].map(X));[-8,0,8].forEach(x=>circ(c,W_,cx+x*u,cy+18*u,3.5*u));ell(c,'#D4AF37',cx,cy+22*u,16*u,3*u);
+  [[-3,0],[2,3],[-1,7]].forEach(([x,y])=>circ(c,UR,cx+x*u,cy+y*u,1.2*u));rect(c,W_,cx-0.38*h,0.8*h,0.76*h,0.09*h);txt(c,B,'UNION JUSTICE CONFIDENCE',cx,0.845*h,0.042*h);});
+def('us-me','Мен','us',2/3,(c,w,h)=>{const B='#00205B',cx=w/2,cy=0.48*h;rect(c,B,0,0,w,h);
+  shield(c,SKY,cx-0.12*h,cy-0.15*h,0.24*h,0.3*h);rect(c,GR,cx-0.11*h,cy+0.06*h,0.22*h,0.03*h);poly(c,'#2E6B2E',[[cx,cy-0.13*h],[cx+0.05*h,cy+0.03*h],[cx-0.05*h,cy+0.03*h]]);
+  ell(c,'#7A4A1E',cx+0.02*h,cy+0.08*h,0.06*h,0.03*h);figure(c,'#7A4A1E',cx-0.2*h,cy+0.02*h,h);figure(c,'#1F3F79',cx+0.2*h,cy+0.02*h,h);
+  star(c,UY,cx,0.12*h,0.06*h);rect(c,W_,cx-0.15*h,0.19*h,0.3*h,0.05*h);rect(c,W_,cx-0.2*h,0.75*h,0.4*h,0.09*h);txt(c,B,'MAINE',cx,0.795*h,0.07*h);});
+def('us-md','Меріленд','us',2/3,(c,w,h)=>{const G='#EAAA00',K='#000000',R='#B11F24',qw=w/2,qh=h/2;
+  const calvert=(x0,y0)=>{const pw=qw/6,t=0.16*qh;for(let i=0;i<6;i++)rect(c,i%2?K:G,x0+i*pw,y0,pw,qh);
+    c.save();c.beginPath();c.moveTo(x0,y0-t);c.lineTo(x0+qw,y0+qh-t);c.lineTo(x0+qw,y0+qh+t);c.lineTo(x0,y0+t);c.closePath();c.clip();
+    for(let i=0;i<6;i++)rect(c,i%2?G:K,x0+i*pw,y0,pw,qh);c.restore();};
+  const cross=(x0,y0)=>{const hx=qw/2,hy=qh/2,t=0.09*qh;[[0,0,W_],[hx,0,R],[0,hy,R],[hx,hy,W_]].forEach(([dx,dy,col])=>{rect(c,col,x0+dx,y0+dy,hx,hy);
+    c.save();c.beginPath();c.rect(x0+dx,y0+dy,hx,hy);c.clip();const o=col===W_?R:W_;rect(c,o,x0+hx-t,y0+0.1*qh,2*t,0.8*qh);rect(c,o,x0+0.1*qw,y0+hy-t,0.8*qw,2*t);
+    [[hx,0.1*qh],[hx,0.9*qh],[0.1*qw,hy],[0.9*qw,hy]].forEach(([px,py])=>circ(c,o,x0+px,y0+py,1.6*t));c.restore();});};
+  calvert(0,0);cross(qw,0);cross(0,qh);calvert(qw,qh);});
+def('us-ma','Массачусетс','us',2/3,(c,w,h)=>{const cx=w/2,cy=0.5*h,B='#14315B',Y='#F2B33D';rect(c,W_,0,0,w,h);
+  shield(c,Y,cx-0.165*h,cy-0.215*h,0.33*h,0.43*h);shield(c,B,cx-0.15*h,cy-0.2*h,0.3*h,0.4*h);
+  ell(c,Y,cx,cy-0.06*h,0.03*h,0.035*h);rect(c,Y,cx-0.03*h,cy-0.03*h,0.06*h,0.12*h);rect(c,Y,cx-0.03*h,cy+0.09*h,0.02*h,0.07*h);rect(c,Y,cx+0.01*h,cy+0.09*h,0.02*h,0.07*h);
+  line(c,Y,0.01*h,[[cx-0.07*h,cy-0.08*h],[cx-0.07*h,cy+0.12*h]]);star(c,W_,cx-0.08*h,cy-0.12*h,0.035*h);
+  line(c,Y,0.03*h,[[cx-0.02*h,cy-0.24*h],[cx+0.08*h,cy-0.36*h]]);rect(c,B,cx-0.2*h,cy+0.24*h,0.4*h,0.07*h);});
+def('us-mi','Мічиган','us',2/3,(c,w,h)=>{const cx=w/2,cy=0.52*h,Br='#8B5A2B';rect(c,'#00205B',0,0,w,h);
+  shield(c,SKY,cx-0.11*h,cy-0.15*h,0.22*h,0.28*h);circ(c,UY,cx,cy-0.05*h,0.04*h);rect(c,GR,cx-0.11*h,cy+0.03*h,0.22*h,0.06*h);
+  ell(c,Br,cx-0.2*h,cy,0.06*h,0.11*h);ell(c,Br,cx+0.2*h,cy,0.06*h,0.11*h);eagle1(c,'#5A3A1E',cx,cy-0.28*h,0.1*h);
+  rect(c,UR,cx-0.08*h,cy-0.2*h,0.16*h,0.04*h);rect(c,W_,cx-0.22*h,cy+0.2*h,0.44*h,0.07*h);});
+def('us-mn','Міннесота','us',3/5,(c,w,h)=>{rect(c,'#52C9E8',0,0,w,h);poly(c,'#0A2E5C',[[0,0],[0.33*w,0],[0.33*w,0.5*h],[0.4*w,0.68*h],[0.33*w,h],[0,h]]);
+  star(c,W_,0.16*w,h/2,0.17*h,8,0.42);});
+def('us-ms','Міссісіпі','us',3/5,(c,w,h)=>{const G=UY,bw=0.15*w,gw=0.012*w,cx=w/2,cy=0.47*h;rect(c,UR,0,0,w,h);
+  rect(c,G,bw,0,gw,h);rect(c,G,w-bw-gw,0,gw,h);rect(c,'#002A86',bw+gw,0,w-2*(bw+gw),h);
+  for(let i=0;i<20;i++){const a=-Math.PI/2+(i+1)*2*Math.PI/21;star(c,W_,cx+Math.cos(a)*0.3*h,cy+Math.sin(a)*0.3*h,0.025*h);}star(c,G,cx,cy-0.3*h,0.04*h);
+  for(let i=0;i<5;i++){const a=-Math.PI/2+(i+0.5)*2*Math.PI/5;ell(c,GR,cx+Math.cos(a)*0.11*h,cy+Math.sin(a)*0.11*h,0.08*h,0.035*h,a);}
+  for(let i=0;i<5;i++){const a=-Math.PI/2+i*2*Math.PI/5;ell(c,W_,cx+Math.cos(a)*0.08*h,cy+Math.sin(a)*0.08*h,0.09*h,0.06*h,a);}
+  circ(c,G,cx,cy,0.04*h);txt(c,G,'IN GOD WE TRUST',cx,0.88*h,0.06*h);});
+def('us-mo','Міссурі','us',7/12,(c,w,h)=>{const cx=w/2,cy=h/2;hs(c,w,h,[UR,W_,UB]);
+  c.strokeStyle=UB;c.lineWidth=0.07*h;c.beginPath();c.arc(cx,cy,0.25*h,0,Math.PI*2);c.stroke();circ(c,W_,cx,cy,0.215*h);
+  for(let i=0;i<24;i++){const a=i*Math.PI/12;star(c,W_,cx+Math.cos(a)*0.25*h,cy+Math.sin(a)*0.25*h,0.018*h);}
+  shield(c,UR,cx-0.06*h,cy-0.08*h,0.12*h,0.15*h);c.save();shieldPath(c,cx-0.06*h,cy-0.08*h,0.12*h,0.15*h);c.clip();rect(c,'#1F5FA8',cx,cy-0.08*h,0.06*h,0.15*h);c.restore();
+  ell(c,BR,cx-0.12*h,cy+0.01*h,0.035*h,0.07*h);ell(c,BR,cx+0.12*h,cy+0.01*h,0.035*h,0.07*h);});
+def('us-mt','Монтана','us',2/3,(c,w,h)=>{const cx=w/2,cy=0.52*h,r=0.205*h;rect(c,UB,0,0,w,h);txt(c,UY,'MONTANA',cx,0.13*h,0.13*h);circ(c,UY,cx,cy,0.25*h);circ(c,SKY,cx,cy,r);
+  clipCirc(c,cx,cy,r,()=>{circ(c,'#FFC72C',cx+0.06*h,cy-0.04*h,0.05*h);poly(c,W_,[[cx-r,cy+0.02*h],[cx-0.12*h,cy-0.1*h],[cx-0.04*h,cy-0.02*h],[cx+0.06*h,cy-0.12*h],[cx+r,cy+0.02*h]]);
+    rect(c,GR,cx-r,cy+0.02*h,2*r,r);ell(c,'#1F5FA8',cx,cy+0.08*h,r,0.025*h);});
+  rect(c,W_,cx-0.17*h,cy+0.26*h,0.34*h,0.07*h);});
+def('us-ne','Небраска','us',3/5,(c,w,h)=>{const cx=w/2,cy=h/2,Y='#D4AF37';rect(c,UB,0,0,w,h);circ(c,Y,cx,cy,0.3*h);circ(c,UB,cx,cy,0.27*h);
+  circ(c,Y,cx,cy,0.2*h);circ(c,'#C0C0C0',cx,cy,0.17*h);poly(c,Y,[[cx-0.17*h,cy+0.05*h],[cx-0.06*h,cy-0.08*h],[cx+0.02*h,cy],[cx+0.1*h,cy-0.1*h],[cx+0.17*h,cy+0.05*h]]);
+  rect(c,Y,cx-0.165*h,cy+0.05*h,0.33*h,0.05*h);});
+def('us-nv','Невада','us',2/3,(c,w,h)=>{const B='#003DA5',Y='#FFC72C',sx=0.2*w,sy=0.32*h;rect(c,B,0,0,w,h);
+  c.strokeStyle='#A8B84A';c.lineWidth=0.02*h;[[0.6,1.4],[-0.4,0.4]].forEach(([a0,a1])=>{c.beginPath();c.arc(sx,sy,0.13*h,a0*Math.PI,a1*Math.PI);c.stroke();});
+  star(c,W_,sx,sy,0.1*h);txt(c,Y,'NEVADA',sx,sy+0.2*h,0.07*h);rect(c,Y,sx-0.13*h,sy-0.24*h,0.26*h,0.06*h);txt(c,B,'BATTLE BORN',sx,sy-0.21*h,0.035*h);});
+def('us-nh','Нью-Гемпшир','us',2/3,(c,w,h)=>{const cx=w/2,cy=0.5*h,r=0.2*h;rect(c,UB,0,0,w,h);circ(c,UY,cx,cy,0.3*h);circ(c,UB,cx,cy,0.26*h);
+  for(let i=0;i<9;i++){const a=Math.PI*(0.85+i*1.3/8);star(c,UY,cx+Math.cos(a)*0.34*h,cy+Math.sin(a)*0.34*h,0.03*h);}
+  circ(c,W_,cx,cy,r);clipCirc(c,cx,cy,r,()=>{rect(c,'#3D7DD8',cx-r,cy+0.07*h,2*r,0.15*h);
+    poly(c,BR,[[cx-0.13*h,cy+0.03*h],[cx+0.13*h,cy+0.03*h],[cx+0.1*h,cy+0.08*h],[cx-0.1*h,cy+0.08*h]]);[-0.06,0.02,0.09].forEach(d=>rect(c,BR,cx+d*h,cy-0.12*h,0.008*h,0.15*h));});});
+def('us-nj','Нью-Джерсі','us',2/3,(c,w,h)=>{const cx=w/2,cy=0.48*h,B='#2A5CAA';rect(c,'#E1C16E',0,0,w,h);
+  shield(c,B,cx-0.09*h,cy-0.12*h,0.18*h,0.23*h);[-0.05,0,0.05].forEach(d=>rect(c,W_,cx+(d-0.012)*h,cy-0.06*h,0.024*h,0.08*h));
+  figure(c,B,cx-0.2*h,cy+0.02*h,h);figure(c,W_,cx+0.2*h,cy+0.02*h,h);ell(c,'#7A4A1E',cx,cy-0.18*h,0.05*h,0.04*h);rect(c,B,cx-0.25*h,cy+0.22*h,0.5*h,0.07*h);});
+def('us-nm','Нью-Мексико','us',2/3,(c,w,h)=>{const R=UR,cx=w/2,cy=h/2,t=0.034*h;rect(c,UY,0,0,w,h);
+  [0,1,2,3].forEach(k=>{const a=k*Math.PI/2,ux=Math.cos(a),uy=Math.sin(a),px=-uy,py=ux;
+    [[-0.117,0.27],[-0.05,0.31],[0.05,0.31],[0.117,0.27]].forEach(([o,L])=>line(c,R,t,[[cx+px*o*h,cy+py*o*h],[cx+(ux*L+px*o)*h,cy+(uy*L+py*o)*h]]));});
+  circ(c,R,cx,cy,0.1*h);});
+def('us-ny','Нью-Йорк','us',1/2,(c,w,h)=>{const cx=w/2,cy=0.52*h,B='#002D72';rect(c,B,0,0,w,h);
+  c.save();c.beginPath();c.ellipse(cx,cy,0.11*h,0.14*h,0,0,Math.PI*2);c.clip();rect(c,SKY,cx-0.12*h,cy-0.15*h,0.24*h,0.3*h);circ(c,'#FFC72C',cx,cy-0.02*h,0.05*h);
+  rect(c,GR,cx-0.12*h,cy+0.03*h,0.24*h,0.12*h);c.restore();figure(c,'#1F5FA8',cx-0.22*h,cy+0.02*h,h);figure(c,'#E8B04B',cx+0.22*h,cy+0.02*h,h);
+  circ(c,SKY,cx,cy-0.2*h,0.04*h);eagle1(c,'#5A3A1E',cx,cy-0.28*h,0.09*h);rect(c,W_,cx-0.18*h,cy+0.2*h,0.36*h,0.07*h);txt(c,B,'EXCELSIOR',cx,cy+0.235*h,0.05*h);});
+def('us-nc','Північна Кароліна','us',2/3,(c,w,h)=>{const Y=UY,bw=w/3,cx=bw/2;rect(c,UB,0,0,bw,h);rect(c,UR,bw,0,w-bw,h/2);rect(c,W_,bw,h/2,w-bw,h/2);
+  star(c,W_,cx,h/2,0.11*h);txt(c,Y,'N',cx-0.18*h,h/2,0.14*h);txt(c,Y,'C',cx+0.18*h,h/2,0.14*h);rect(c,Y,cx-0.21*h,0.17*h,0.42*h,0.06*h);rect(c,Y,cx-0.21*h,0.77*h,0.42*h,0.06*h);});
+def('us-nd','Північна Дакота','us',26/33,(c,w,h)=>{const cx=w/2,cy=0.48*h,Y='#F0C24F';rect(c,'#1F3F79',0,0,w,h);
+  star(c,Y,cx,0.17*h,0.12*h,16,0.55);for(let i=0;i<13;i++){const a=Math.PI*(1.15+i*0.7/12);star(c,W_,cx+Math.cos(a)*0.2*h,0.3*h+Math.sin(a)*0.2*h,0.018*h);}
+  eagle1(c,'#3B2A1A',cx,cy+0.05*h,0.25*h);shield(c,W_,cx-0.06*h,cy,0.12*h,0.15*h);rect(c,UB,cx-0.06*h,cy,0.12*h,0.04*h);
+  [0.06,0.1].forEach(d=>rect(c,UR,cx-0.05*h,cy+d*h,0.1*h,0.02*h));rect(c,UR,cx-0.3*h,0.83*h,0.6*h,0.08*h);txt(c,Y,'NORTH DAKOTA',cx,0.87*h,0.055*h);});
+def('us-oh','Огайо','us',8/13,(c,w,h)=>{const cx=0.2*w,cy=h/2;c.save();c.beginPath();c.moveTo(0,0);c.lineTo(w,0);c.lineTo(0.77*w,h/2);c.lineTo(w,h);c.lineTo(0,h);c.closePath();c.clip();
+  hs(c,w,h,[UR,W_,UR,W_,UR]);poly(c,UB,[[0,0],[0.52*w,h/2],[0,h]]);circ(c,W_,cx,cy,0.15*h);circ(c,UR,cx,cy,0.09*h);
+  for(let i=0;i<17;i++){const a=Math.PI*(0.62+i*1.76/16);star(c,W_,cx+Math.cos(a)*0.26*h,cy+Math.sin(a)*0.26*h,0.03*h);}c.restore();});
+def('us-ok','Оклахома','us',2/3,(c,w,h)=>{const cx=w/2,cy=0.45*h;rect(c,'#3A75C4',0,0,w,h);
+  for(let i=0;i<7;i++){const x=cx+(i-3)*0.045*h;line(c,'#7A4A1E',0.006*h,[[x,cy+0.06*h],[x,cy+0.14*h]]);ell(c,W_,x,cy+0.17*h,0.012*h,0.035*h);}
+  ell(c,'#E5C79B',cx,cy,0.24*h,0.12*h);[-0.13,-0.065,0,0.065,0.13].forEach(d=>{line(c,'#7A4A1E',0.008*h,[[cx+(d-0.015)*h,cy-0.05*h],[cx+(d+0.015)*h,cy-0.05*h]]);
+    line(c,'#7A4A1E',0.008*h,[[cx+d*h,cy-0.065*h],[cx+d*h,cy-0.035*h]]);});
+  line(c,'#F2E8D8',0.02*h,[[cx-0.3*h,cy+0.03*h],[cx+0.3*h,cy-0.05*h]]);line(c,GR,0.015*h,[[cx-0.3*h,cy-0.05*h],[cx+0.3*h,cy+0.03*h]]);txt(c,W_,'OKLAHOMA',cx,0.8*h,0.11*h);});
+def('us-or','Орегон','us',3/5,(c,w,h)=>{const cx=w/2,cy=0.53*h,B='#002A86';rect(c,B,0,0,w,h);txt(c,UY,'STATE OF OREGON',cx,0.12*h,0.09*h);
+  for(let i=0;i<33;i++){const a=i*2*Math.PI/33;star(c,UY,cx+Math.cos(a)*0.27*h,cy+Math.sin(a)*0.27*h,0.016*h);}
+  ell(c,UY,cx,cy,0.12*h,0.14*h);ell(c,B,cx,cy,0.1*h,0.12*h);eagle1(c,UY,cx,cy-0.17*h,0.07*h);txt(c,UY,'1859',cx,0.9*h,0.08*h);});
+def('us-pa','Пенсильванія','us',2/3,(c,w,h)=>{const cx=w/2,cy=0.5*h,K='#1A1A1A';rect(c,UB,0,0,w,h);
+  shield(c,'#D4AF37',cx-0.1*h,cy-0.13*h,0.2*h,0.25*h);rect(c,'#1F5FA8',cx-0.1*h,cy-0.13*h,0.2*h,0.08*h);rect(c,GR,cx-0.1*h,cy+0.03*h,0.2*h,0.04*h);
+  [[-0.21,1],[0.21,-1]].forEach(([dx,s])=>{ell(c,K,cx+dx*h,cy,0.06*h,0.09*h);ell(c,K,cx+(dx+s*0.04)*h,cy-0.1*h,0.025*h,0.05*h,s*0.5);});
+  eagle1(c,'#5A3A1E',cx,cy-0.24*h,0.09*h);rect(c,UR,cx-0.25*h,cy+0.2*h,0.5*h,0.07*h);});
+def('us-ri','Род-Айленд','us',29/33,(c,w,h)=>{const Y='#FFC72C',cx=w/2,cy=0.48*h;rect(c,W_,0,0,w,h);
+  for(let i=0;i<13;i++){const a=-Math.PI/2+i*2*Math.PI/13;star(c,Y,cx+Math.cos(a)*0.36*h,cy+Math.sin(a)*0.36*h,0.035*h);}
+  line(c,Y,0.035*h,[[cx,cy-0.18*h],[cx,cy+0.18*h]]);line(c,Y,0.03*h,[[cx-0.09*h,cy-0.1*h],[cx+0.09*h,cy-0.1*h]]);
+  c.strokeStyle=Y;c.lineWidth=0.03*h;c.beginPath();c.arc(cx,cy+0.06*h,0.13*h,0.15*Math.PI,0.85*Math.PI);c.stroke();
+  c.lineWidth=0.02*h;c.beginPath();c.arc(cx,cy-0.21*h,0.03*h,0,Math.PI*2);c.stroke();rect(c,UB,cx-0.17*h,cy+0.22*h,0.34*h,0.08*h);txt(c,Y,'HOPE',cx,cy+0.26*h,0.06*h);});
+def('us-sc','Південна Кароліна','us',2/3,(c,w,h)=>{const cx=w/2,cy=0.5*h,top=cy-0.12*h;rect(c,'#002F6C',0,0,w,h);
+  crescent(c,W_,0.15*w,0.2*h,0.09*h,0.15*w+0.035*h,0.155*h,0.085*h);
+  poly(c,W_,[[cx-0.03*h,cy+0.38*h],[cx+0.03*h,cy+0.38*h],[cx+0.015*h,top],[cx-0.015*h,top]]);
+  [-2.9,-2.5,-2.1,-1.8,-1.57,-1.34,-1,-0.6,-0.25,0.35,2.8].forEach(a=>ell(c,W_,cx+Math.cos(a)*0.1*h,top+Math.sin(a)*0.1*h,0.11*h,0.022*h,a));});
+def('us-sd','Південна Дакота','us',2/3,(c,w,h)=>{const cx=w/2,cy=0.5*h,Y='#FFC72C',B='#3A75C4',r=0.17*h;rect(c,B,0,0,w,h);star(c,Y,cx,cy,0.27*h,28,0.82);
+  circ(c,W_,cx,cy,0.19*h);circ(c,B,cx,cy,r);clipCirc(c,cx,cy,r,()=>{rect(c,GR,cx-r,cy+0.04*h,2*r,r);poly(c,'#6E7F8C',[[cx-r,cy+0.04*h],[cx-0.08*h,cy-0.06*h],[cx+0.02*h,cy+0.04*h]]);});
+  txt(c,Y,'SOUTH DAKOTA',cx,0.1*h,0.08*h);txt(c,Y,'THE MOUNT RUSHMORE STATE',cx,0.9*h,0.06*h);});
+def('us-tn','Теннессі','us',3/5,(c,w,h)=>{const cx=0.46*w,cy=h/2;rect(c,UR,0,0,w,h);rect(c,W_,0.925*w,0,0.012*w,h);rect(c,UB,0.937*w,0,0.063*w,h);
+  circ(c,W_,cx,cy,0.27*h);circ(c,UB,cx,cy,0.24*h);[[0,-0.115],[-0.1,0.06],[0.1,0.06]].forEach(([dx,dy])=>star(c,W_,cx+dx*h,cy+dy*h,0.075*h));});
+def('us-tx','Техас','us',2/3,(c,w,h)=>{const bw=w/3;rect(c,UB,0,0,bw,h);rect(c,W_,bw,0,w-bw,h/2);rect(c,UR,bw,h/2,w-bw,h/2);star(c,W_,bw/2,h/2,0.19*h);});
+def('us-ut','Юта','us',2/3,(c,w,h)=>{const N='#14284B',Y='#F2B33D',cx=w/2,cy=0.52*h;rect(c,N,0,0,w,0.46*h);rect(c,'#BC3A2C',0,0.62*h,w,0.38*h);
+  poly(c,W_,[[0,0.45*h],[0.15*w,0.36*h],[0.27*w,0.46*h],[0.4*w,0.34*h],[0.6*w,0.34*h],[0.73*w,0.46*h],[0.85*w,0.36*h],[w,0.45*h],[w,0.62*h],[0,0.62*h]]);
+  const hx=r=>Array.from({length:6},(_,i)=>{const a=Math.PI/6+i*Math.PI/3;return[cx+Math.cos(a)*r,cy+Math.sin(a)*r];});poly(c,W_,hx(0.21*h));poly(c,N,hx(0.18*h));
+  [[0.08,0.09],[0.03,0.08],[-0.02,0.065],[-0.065,0.045]].forEach(([d,rx])=>ell(c,Y,cx,cy+d*h,rx*h,0.03*h));star(c,Y,cx,0.2*h,0.05*h);});
+def('us-vt','Вермонт','us',3/5,(c,w,h)=>{const cx=w/2,cy=0.5*h,x=cx-0.12*h,y=cy-0.17*h;rect(c,'#003F87',0,0,w,h);
+  [-1,1].forEach(s=>{for(let i=0;i<5;i++)ell(c,'#2E6B2E',cx+s*(0.15+i*0.012)*h,cy-0.15*h+i*0.07*h,0.05*h,0.02*h,s*0.6);});
+  shield(c,SKY,x,y,0.24*h,0.32*h);c.save();shieldPath(c,x,y,0.24*h,0.32*h);c.clip();rect(c,GR,x,cy,0.24*h,0.2*h);
+  poly(c,'#2E6B2E',[[cx,cy-0.14*h],[cx+0.045*h,cy+0.02*h],[cx-0.045*h,cy+0.02*h]]);ell(c,'#C8A165',cx+0.06*h,cy+0.06*h,0.035*h,0.02*h);c.restore();
+  ell(c,'#7A4A1E',cx,cy-0.22*h,0.04*h,0.04*h);rect(c,UR,cx-0.2*h,cy+0.2*h,0.4*h,0.08*h);txt(c,UY,'VERMONT',cx,cy+0.24*h,0.05*h);});
+def('us-va','Вірджинія','us',2/3,(c,w,h)=>{const cx=w/2,cy=0.5*h;rect(c,UB,0,0,w,h);circ(c,W_,cx,cy,0.3*h);
+  c.strokeStyle=GR;c.lineWidth=0.03*h;c.beginPath();c.arc(cx,cy,0.27*h,0,Math.PI*2);c.stroke();
+  figure(c,'#1F5FA8',cx,cy+0.02*h,h*0.7);line(c,'#7A4A1E',0.01*h,[[cx+0.05*h,cy-0.18*h],[cx+0.05*h,cy+0.08*h]]);ell(c,'#8B1A1A',cx,cy+0.13*h,0.1*h,0.03*h);
+  txt(c,UB,'VIRGINIA',cx,cy-0.215*h,0.045*h);});
+def('us-wa','Вашингтон','us',2/3,(c,w,h)=>{const cx=w/2,cy=h/2,r=0.2*h;rect(c,'#005E2B',0,0,w,h);circ(c,'#FFC72C',cx,cy,0.3*h);circ(c,'#1E3F66',cx,cy,r);
+  clipCirc(c,cx,cy,r,()=>{ell(c,'#E8C7A0',cx,cy+0.01*h,0.07*h,0.09*h);ell(c,W_,cx-0.02*h,cy-0.06*h,0.08*h,0.05*h);rect(c,'#111111',cx-0.12*h,cy+0.1*h,0.24*h,0.12*h);});});
+def('us-wv','Західна Вірджинія','us',11/19,(c,w,h)=>{const B='#002855',cx=w/2,cy=0.5*h,b=0.05*h;rect(c,B,0,0,w,h);rect(c,W_,b,b,w-2*b,h-2*b);
+  ell(c,'#A8A8A8',cx,cy,0.08*h,0.1*h);figure(c,BR,cx-0.15*h,cy+0.02*h,h*0.8);figure(c,'#1F3F79',cx+0.15*h,cy+0.02*h,h*0.8);
+  c.strokeStyle=GR;c.lineWidth=0.03*h;c.beginPath();c.arc(cx,cy-0.02*h,0.24*h,0.15*Math.PI,0.85*Math.PI);c.stroke();
+  [0.25,0.5,0.75].forEach(t=>{const a=Math.PI*(0.15+0.7*t);circ(c,'#E06AA0',cx+Math.cos(a)*0.24*h,cy-0.02*h+Math.sin(a)*0.24*h,0.025*h);});rect(c,UR,cx-0.2*h,0.13*h,0.4*h,0.07*h);});
+def('us-wi','Вісконсин','us',2/3,(c,w,h)=>{const cx=w/2,cy=0.5*h;rect(c,UB,0,0,w,h);txt(c,W_,'WISCONSIN',cx,0.13*h,0.1*h);txt(c,W_,'1848',cx,0.88*h,0.09*h);
+  shield(c,UY,cx-0.09*h,cy-0.12*h,0.18*h,0.23*h);rect(c,UR,cx-0.09*h,cy-0.02*h,0.18*h,0.03*h);rect(c,UR,cx-0.015*h,cy-0.12*h,0.03*h,0.23*h);
+  figure(c,'#E8C7A0',cx-0.17*h,cy+0.03*h,h*0.85);figure(c,BR,cx+0.17*h,cy+0.03*h,h*0.85);ell(c,BR,cx,cy-0.17*h,0.06*h,0.025*h);rect(c,W_,cx-0.13*h,cy+0.14*h,0.26*h,0.05*h);});
+def('us-wy','Вайомінг','us',7/10,(c,w,h)=>{const cx=w/2,cy=0.52*h,u=h/100;rect(c,UR,0,0,w,h);rect(c,W_,0.05*h,0.05*h,w-0.1*h,0.9*h);rect(c,UB,0.09*h,0.09*h,w-0.18*h,0.82*h);
+  poly(c,W_,[[-36,8],[-38,-2],[-34,-8],[-28,-10],[-24,-20],[-12,-26],[2,-22],[16,-16],[26,-10],[30,-2],[34,4],[30,4],[30,10],[28,22],[23,22],[22,11],[12,12],[11,22],[6,22],[5,12],[-10,13],[-12,22],[-18,22],[-18,12],[-24,12],[-30,12]].map(([x,y])=>[cx+x*u,cy+y*u]));
+  poly(c,W_,[[-31,-9],[-29,-17],[-27,-10]].map(([x,y])=>[cx+x*u,cy+y*u]));
+  circ(c,UB,cx+4*u,cy-4*u,9*u);circ(c,UR,cx+4*u,cy-4*u,7*u);circ(c,W_,cx+4*u,cy-4*u,5.5*u);});
+
+// Землі Німеччини
+const DK='#000000',DR='#DD0000',DG='#FFCE00',DE_R='#E2001A';
+function deShield(c,h,cx,cy,edge,fn){const x=cx-0.12*h,y=cy-0.17*h,sw=0.24*h,sh=0.34*h; // щит у центрі прапора землі
+  if(edge)shield(c,edge,x-0.012*h,y-0.012*h,sw+0.024*h,sh+0.024*h);c.save();shieldPath(c,x,y,sw,sh);c.clip();fn(x,y,sw,sh);c.restore();}
+def('de-bw','Баден-Вюртемберг','de',3/5,(c,w,h)=>{hs(c,w,h,[DK,DG]);deShield(c,h,w/2,h/2,DK,(x,y,sw,sh)=>{rect(c,DG,x,y,sw,sh);
+  [0.25,0.5,0.75].forEach(t=>{ell(c,DK,x+sw/2,y+sh*t-0.02*h,0.07*h,0.022*h);circ(c,DK,x+sw/2-0.07*h,y+sh*t-0.035*h,0.018*h);});});});
+def('de-by','Баварія','de',3/5,(c,w,h)=>{const B='#0098D4',dw=w/5,dh=h/3;rect(c,W_,0,0,w,h);
+  for(let k=0;k<=5;k++)for(let m=0;m<=3;m++){const x=k*dw,y=m*dh;poly(c,B,[[x,y-dh/2],[x+dw/2,y],[x,y+dh/2],[x-dw/2,y]]);}});
+def('de-be','Берлін','de',3/5,(c,w,h)=>{const u=h/100,cx=w/2,cy=h/2;hs(c,w,h,[DE_R,W_,DE_R],[1,3,1]);
+  poly(c,DK,[[-6,-28],[0,-29],[3,-25],[8,-20],[11,-10],[12,0],[12,10],[15,18],[13,27],[4,27],[6,19],[1,14],[-3,21],[-1,27],[-10,27],[-9,18],[-6,9],[-8,2],[-16,-2],[-19,-6],
+    [-16,-8],[-9,-6],[-8,-11],[-16,-13],[-19,-17],[-15,-19],[-8,-17],[-10,-21],[-16,-22],[-15,-26]].map(([x,y])=>[cx+x*u,cy+y*u]));circ(c,DE_R,cx-14*u,cy-23*u,1.3*u);});
+def('de-bb','Бранденбург','de',3/5,(c,w,h)=>{hs(c,w,h,['#DA121A',W_]);deShield(c,h,w/2,h/2,'#DA121A',(x,y,sw,sh)=>{rect(c,W_,x,y,sw,sh);eagle1(c,'#DA121A',x+sw/2,y+sh*0.45,0.11*h);});});
+def('de-hb','Бремен','de',2/3,(c,w,h)=>{const s=h/8;hs(c,w,h,Array.from({length:8},(_,i)=>i%2?W_:DE_R));for(let i=0;i<8;i++)for(let k=0;k<2;k++)rect(c,(i+k)%2?DE_R:W_,k*s,i*s,s,s);});
+def('de-hh','Гамбург','de',2/3,(c,w,h)=>{const cx=w/2,cy=0.58*h,u=h/100;rect(c,DE_R,0,0,w,h);rect(c,W_,cx-22*u,cy-6*u,44*u,24*u);
+  [[-17,-20],[0,-28],[17,-20]].forEach(([x,top])=>{rect(c,W_,cx+(x-5)*u,cy+top*u,10*u,-top*u);for(let k=0;k<3;k++)rect(c,W_,cx+(x-5+k*4)*u,cy+(top-3)*u,2*u,3*u);});
+  poly(c,DE_R,[[cx-6*u,cy+18*u],[cx-6*u,cy+6*u],[cx,cy],[cx+6*u,cy+6*u],[cx+6*u,cy+18*u]]);rect(c,W_,cx-0.6*u,cy-40*u,1.2*u,9*u);rect(c,W_,cx-2.5*u,cy-37*u,5*u,1.2*u);});
+def('de-he','Гессен','de',3/5,(c,w,h)=>{hs(c,w,h,[DE_R,W_]);deShield(c,h,w/2,h/2,null,(x,y,sw,sh)=>{rect(c,'#0076BD',x,y,sw,sh);stripedLion(c,DE_R,W_,x+sw/2,y+sh*0.47,0.12*h,9);});});
+def('de-ni','Нижня Саксонія','de',3/5,(c,w,h)=>{const u=h/100;hs(c,w,h,[DK,DR,DG]);deShield(c,h,w/2,h/2,W_,(x,y,sw,sh)=>{rect(c,DR,x,y,sw,sh);const cx=x+sw/2,cy=y+sh*0.48;
+  poly(c,W_,[[-10,-22],[-14,-18],[-12,-15],[-8,-17],[-5,-12],[-12,-8],[-16,-2],[-13,-1],[-8,-5],[-6,-2],[-12,4],[-10,6],[-3,0],[2,2],[6,8],[4,16],[8,16],[10,8],[12,14],[16,14],[13,4],[15,-2],[20,4],[19,-4],[13,-8],[4,-8],[-2,-14],[-4,-20],[-6,-24]].map(([a,b])=>[cx+a*u,cy+b*u]));});});
+def('de-mv','Мекленбург-Передня Померанія','de',3/5,(c,w,h)=>hs(c,w,h,['#0169B4',W_,'#FFDD00',W_,'#DA121A'],[4,3,2,3,4]));
+def('de-nw','Північний Рейн-Вестфалія','de',3/5,(c,w,h)=>{const G='#009036';hs(c,w,h,[G,W_,DE_R]);deShield(c,h,w/2,h/2,W_,(x,y,sw,sh)=>{rect(c,G,x,y,sw/2,sh*0.55);rect(c,DE_R,x+sw/2,y,sw/2,sh*0.55);
+  rect(c,W_,x,y+sh*0.55,sw,sh);line(c,W_,0.02*h,[[x,y+0.1*h],[x+0.04*h,y+0.08*h],[x+0.08*h,y+0.12*h],[x+0.12*h,y+0.1*h]]);ell(c,W_,x+0.18*h,y+0.09*h,0.03*h,0.05*h);circ(c,DE_R,x+sw/2,y+0.25*h,0.035*h);});});
+def('de-rp','Рейнланд-Пфальц','de',3/5,(c,w,h)=>{const x=0.08*w,y=0.13*h,sw=0.24*h,sh=0.3*h;hs(c,w,h,[DK,DR,DG]);
+  poly(c,DG,[[x,y-0.01*h],[x+sw,y-0.01*h],[x+sw,y-0.07*h],[x+0.75*sw,y-0.04*h],[x+sw/2,y-0.08*h],[x+0.25*sw,y-0.04*h],[x,y-0.07*h]]);
+  shield(c,DG,x-0.01*h,y-0.005*h,sw+0.02*h,sh+0.02*h);c.save();shieldPath(c,x,y,sw,sh);c.clip();rect(c,W_,x,y,sw/2,sh/2);rect(c,DR,x+sw/2,y,sw/2,sh/2);
+  rect(c,DR,x+sw/4-0.012*h,y,0.024*h,sh/2);rect(c,DR,x,y+sh/4-0.012*h,sw/2,0.024*h);c.strokeStyle=W_;c.lineWidth=0.012*h;c.beginPath();c.arc(x+0.75*sw,y+sh/4,0.04*h,0,Math.PI*2);c.stroke();
+  rect(c,DK,x,y+sh/2,sw,sh/2);lion(c,DG,x+sw/2,y+sh*0.72,0.07*h);c.restore();});
+def('de-sl','Саар','de',3/5,(c,w,h)=>{hs(c,w,h,[DK,DR,DG]);deShield(c,h,w/2,h/2,W_,(x,y,sw,sh)=>{rect(c,'#0055A4',x,y,sw/2,sh/2);rect(c,W_,x+sw/2,y,sw/2,sh/2);rect(c,DG,x,y+sh/2,sw/2,sh/2);
+  rect(c,DK,x+sw/2,y+sh/2,sw/2,sh/2);lion(c,W_,x+sw/4,y+sh/4,0.05*h);rect(c,DR,x+0.75*sw-0.012*h,y,0.024*h,sh/2);rect(c,DR,x+sw/2,y+sh/4-0.012*h,sw/2,0.024*h);
+  line(c,DR,0.03*h,[[x,y+sh/2],[x+sw/2,y+sh]]);lion(c,DG,x+0.75*sw,y+0.72*sh,0.05*h);});});
+def('de-sn','Саксонія','de',3/5,(c,w,h)=>{const G='#008F45';hs(c,w,h,[W_,G]);deShield(c,h,w/2,h/2,null,(x,y,sw,sh)=>{for(let i=0;i<10;i++)rect(c,i%2?DG:DK,x,y+i*sh/10,sw,sh/10+1);
+  c.strokeStyle=G;c.lineWidth=0.04*h;c.beginPath();c.moveTo(x-0.02*h,y+0.04*h);c.quadraticCurveTo(x+sw*0.6,y+sh*0.3,x+sw+0.02*h,y+sh*0.85);c.stroke();});});
+def('de-st','Саксонія-Ангальт','de',3/5,(c,w,h)=>{hs(c,w,h,[DG,DK]);deShield(c,h,w/2,h/2,W_,(x,y,sw,sh)=>{for(let i=0;i<10;i++)rect(c,i%2?DG:DK,x,y+i*sh/20,sw,sh/20+1);
+  line(c,'#008F45',0.025*h,[[x,y+0.02*h],[x+sw,y+0.14*h]]);rect(c,W_,x,y+sh/2,sw,sh/2);rect(c,DR,x,y+sh*0.82,sw,sh*0.2);
+  ell(c,DK,x+sw/2,y+sh*0.68,0.06*h,0.035*h);circ(c,DK,x+sw/2-0.06*h,y+sh*0.64,0.02*h);});});
+def('de-sh','Шлезвіг-Гольштейн','de',3/5,(c,w,h)=>{const B='#0055A5';hs(c,w,h,[B,W_,DE_R]);deShield(c,h,w/2,h/2,W_,(x,y,sw,sh)=>{rect(c,DG,x,y,sw/2,sh);rect(c,DE_R,x+sw/2,y,sw/2,sh);
+  lion(c,B,x+sw/4,y+sh*0.3,0.045*h);lion(c,B,x+sw/4,y+sh*0.65,0.045*h);star(c,W_,x+0.75*sw,y+sh*0.45,0.07*h,3,0.5);circ(c,W_,x+0.75*sw,y+sh*0.45,0.035*h);});});
+def('de-th','Тюрингія','de',3/5,(c,w,h)=>{hs(c,w,h,[W_,DE_R]);deShield(c,h,w/2,h/2,null,(x,y,sw,sh)=>{rect(c,'#0076BD',x,y,sw,sh);stripedLion(c,DE_R,W_,x+sw/2,y+sh*0.47,0.11*h,8);
+  [[-0.1,-0.13],[0.1,-0.13],[-0.105,-0.03],[0.105,-0.03],[-0.09,0.07],[0.09,0.07],[-0.05,0.13],[0.05,0.13]].forEach(([dx,dy])=>star(c,W_,x+sw/2+dx*h,y+sh*0.47+dy*h,0.016*h));});});
+
+// Британія
+def('uk-en','Англія','uk',3/5,(c,w,h)=>{const t=h/5;rect(c,W_,0,0,w,h);rect(c,'#CE1124',(w-t)/2,0,t,h);rect(c,'#CE1124',0,(h-t)/2,w,t);});
+def('uk-sc','Шотландія','uk',3/5,(c,w,h)=>{rect(c,'#005EB8',0,0,w,h);line(c,W_,0.2*h,[[0,0],[w,h]]);line(c,W_,0.2*h,[[w,0],[0,h]]);});
+def('uk-wa','Уельс','uk',3/5,(c,w,h)=>{const u=h/100,cx=w/2,cy=0.52*h;hs(c,w,h,[W_,'#00B140']);
+  poly(c,'#C8102E',[[-34,-14],[-26,-20],[-20,-18],[-16,-22],[-18,-14],[-12,-10],[-4,-14],[-2,-30],[6,-22],[10,-34],[16,-22],[22,-28],[22,-12],[30,-10],[38,-16],[36,-8],[30,-2],[26,6],
+    [30,14],[34,10],[38,14],[34,20],[24,18],[18,8],[12,10],[14,20],[8,20],[6,10],[-6,10],[-6,20],[-12,20],[-12,8],[-18,2],[-22,-6],[-28,-8],[-34,-8]].map(([x,y])=>[cx+x*u,cy+y*u]));});
+def('uk-ni','Північна Ірландія','uk',1/2,(c,w,h)=>{const R='#CE1124',t=h/5,cx=w/2,cy=h/2;rect(c,W_,0,0,w,h);rect(c,R,(w-t)/2,0,t,h);rect(c,R,0,(h-t)/2,w,t);
+  star(c,W_,cx,cy+0.02*h,0.2*h,6,0.6);rect(c,R,cx-0.04*h,cy-0.02*h,0.08*h,0.12*h);[-0.03,-0.01,0.01,0.03].forEach(d=>rect(c,R,cx+(d-0.008)*h,cy-0.08*h,0.016*h,0.07*h));
+  poly(c,'#FFCE00',[[cx-0.08*h,cy-0.2*h],[cx+0.08*h,cy-0.2*h],[cx+0.09*h,cy-0.3*h],[cx+0.04*h,cy-0.25*h],[cx,cy-0.32*h],[cx-0.04*h,cy-0.25*h],[cx-0.09*h,cy-0.3*h]]);});
+def('uk-kw','Корнуол','uk',3/5,(c,w,h)=>{const t=h/5;rect(c,'#000000',0,0,w,h);rect(c,W_,(w-t)/2,0,t,h);rect(c,W_,0,(h-t)/2,w,t);});
+def('uk-im','Острів Мен','uk',1/2,(c,w,h)=>{const cx=w/2,cy=h/2,L=0.2*h;rect(c,'#CF142B',0,0,w,h);c.lineCap='round';c.lineJoin='round';
+  for(let k=0;k<3;k++){const a=-Math.PI/2+k*2*Math.PI/3,b=a+1.2,kx=cx+Math.cos(a)*L,ky=cy+Math.sin(a)*L,fx=kx+Math.cos(b)*L*0.9,fy=ky+Math.sin(b)*L*0.9;
+    c.strokeStyle=W_;c.lineWidth=0.08*h;c.beginPath();c.moveTo(cx,cy);c.lineTo(kx,ky);c.lineTo(fx,fy);c.stroke();
+    c.strokeStyle='#FFCE00';c.lineWidth=0.05*h;c.beginPath();c.moveTo(fx,fy);c.lineTo(fx+Math.cos(b+1.57)*0.06*h,fy+Math.sin(b+1.57)*0.06*h);c.stroke();}});
+def('uk-je','Джерсі','uk',3/5,(c,w,h)=>{const R='#DF112D',Y='#FFCE00',cx=w/2;rect(c,W_,0,0,w,h);line(c,R,0.12*h,[[0,0],[w,h]]);line(c,R,0.12*h,[[w,0],[0,h]]);
+  shield(c,R,cx-0.07*h,0.15*h,0.14*h,0.18*h);[0.19,0.24,0.29].forEach(y=>ell(c,Y,cx,y*h,0.045*h,0.014*h));
+  poly(c,Y,[[cx-0.06*h,0.14*h],[cx+0.06*h,0.14*h],[cx+0.07*h,0.07*h],[cx+0.03*h,0.1*h],[cx,0.06*h],[cx-0.03*h,0.1*h],[cx-0.07*h,0.07*h]]);});
+def('uk-gg','Гернсі','uk',2/3,(c,w,h)=>{const t=0.26*h,g=0.08*h,Y='#F9DD16';rect(c,W_,0,0,w,h);rect(c,'#E8112D',(w-t)/2,0,t,h);rect(c,'#E8112D',0,(h-t)/2,w,t);
+  rect(c,Y,(w-g)/2,0.1*h,g,0.8*h);rect(c,Y,0.15*w,(h-g)/2,0.7*w,g);});
+def('uk-zs','Шетландські острови','uk',2/3,(c,w,h)=>nordic(c,w,h,'#0081C6',[[W_,6/18,8/18,5/12,7/12]]));
+def('uk-or','Оркнейські острови','uk',2/3,(c,w,h)=>nordic(c,w,h,'#E8112D',[['#FFCE00',5/18,9/18,4/12,8/12],['#00529F',6/18,8/18,5/12,7/12]]));
+
+// Скандинавія
+def('nd-fo','Фарерські острови','nd',8/11,(c,w,h)=>nordic(c,w,h,W_,[['#0065BD',6/22,10/22,6/16,10/16],['#EF303E',7/22,9/22,7/16,9/16]]));
+def('nd-gl','Гренландія','nd',2/3,(c,w,h)=>{const R='#C8102E',cx=7/18*w,cy=h/2,r=h/3;hs(c,w,h,[W_,R]);
+  c.fillStyle=R;c.beginPath();c.arc(cx,cy,r,Math.PI,2*Math.PI);c.closePath();c.fill();c.fillStyle=W_;c.beginPath();c.arc(cx,cy,r,0,Math.PI);c.closePath();c.fill();});
+def('nd-ax','Аландські острови','nd',17/26,(c,w,h)=>nordic(c,w,h,'#0064AE',[['#FFD300',8/26,13/26,6/17,11/17],['#DA0E15',9/26,12/26,7/17,10/17]]));
+def('nd-sk','Сконе','nd',5/8,(c,w,h)=>nordic(c,w,h,'#D50032',[['#FFCD00',5/16,7/16,4/10,6/10]]));
+def('nd-bh','Борнгольм','nd',28/37,(c,w,h)=>nordic(c,w,h,'#C8102E',[['#00843D',12/37,16/37,12/28,16/28]]));
+def('nd-sa','Сапмі','nd',3/4,(c,w,h)=>{const R='#D21034',B='#0035AD',cx=0.475*w,cy=h/2,r=0.27*h;vs(c,w,h,[R,'#007229','#FFCE00',B],[8,1.5,1.5,9]);
+  c.lineWidth=0.06*h;c.strokeStyle=B;c.beginPath();c.arc(cx,cy,r,Math.PI/2,1.5*Math.PI);c.stroke();c.strokeStyle=R;c.beginPath();c.arc(cx,cy,r,-Math.PI/2,Math.PI/2);c.stroke();});
+
 const REG=[['all','🌍 Увесь світ'],['eu','🏰 Європа'],['as','🐼 Азія'],['am','🌵 Америка'],['af','🦁 Африка'],['oc','🦘 Океанія']];
+const SREG=[['sall','⭐ Усі разом'],['us','🗽 Штати США'],['de','🥨 Землі Німеччини'],['uk','💂 Британія'],['nd','❄️ Скандинавія']];
+const SR=SREG.map(r=>r[0]).filter(k=>k!=='sall'); // регіони, де штати і землі, а не країни
+const KINDS=[['c','🌍 Країни'],['s','🗺️ Штати і регіони']];
 const MODES=[['easy','🙂 Легко: з прапорами'],['hard','🤓 Складно: тільки назви']];
 
 function drawFlagOn(c,f,x,y,w,h){c.save();c.translate(x,y);c.beginPath();c.rect(0,0,w,h);c.clip();f.d(c,w,h);c.restore();}
@@ -485,8 +756,9 @@ function pie(f){
   });
   drawFlagOn(c,f,0,0,W,H);
   const d=raw.getImageData(0,0,W,H).data,cnt=used.map(()=>0);
-  for(let i=0;i<d.length;i+=4){let b=0,bd=1e9;for(let k=0;k<used.length;k++){const p=used[k].rgb,x=d[i]-p[0],y=d[i+1]-p[1],z=d[i+2]-p[2],q=x*x+y*y+z*z;if(q<bd){bd=q;b=k;}}cnt[b]++;}
-  const sl=used.map((u,k)=>({rgb:u.rgb,hex:'rgb('+u.k+')',share:cnt[k]/(W*H)})).filter(s=>s.share>=0.002);
+  for(let i=0;i<d.length;i+=4){if(d[i+3]<128)continue;let b=0,bd=1e9;for(let k=0;k<used.length;k++){const p=used[k].rgb,x=d[i]-p[0],y=d[i+1]-p[1],z=d[i+2]-p[2],q=x*x+y*y+z*z;if(q<bd){bd=q;b=k;}}cnt[b]++;}
+  const tot=cnt.reduce((a,b)=>a+b,0)||1;
+  const sl=used.map((u,k)=>({rgb:u.rgb,hex:'rgb('+u.k+')',share:cnt[k]/tot})).filter(s=>s.share>=0.002);
   const S=sl.reduce((a,s)=>a+s.share,0);sl.forEach(s=>s.share/=S);
   return f.pie=sl;
 }
@@ -552,8 +824,11 @@ function flagFit(f,bw,bh){ // прапор, вписаний у рамку
 function load(k,d){try{const v=localStorage.getItem('pyrogy.'+k);return v==null?d:JSON.parse(v);}catch(e){return d;}}
 function save(k,v){try{localStorage.setItem('pyrogy.'+k,JSON.stringify(v));}catch(e){}}
 const HINTS=3; // підказок на одну гру
-const st={region:load('region','all'),mode:load('mode','easy'),sound:load('sound',true),qs:[],i:0,score:0,answered:false,hints:HINTS,hinted:false,hintsUsed:0};
-if(!REG.some(r=>r[0]===st.region))st.region='all';
+const st={kind:load('kind','c'),creg:load('region','all'),sreg:load('sregion','sall'),region:'all',mode:load('mode','easy'),sound:load('sound',true),qs:[],i:0,score:0,answered:false,hints:HINTS,hinted:false,hintsUsed:0};
+if(!KINDS.some(k=>k[0]===st.kind))st.kind='c';
+if(!REG.some(r=>r[0]===st.creg))st.creg='all';
+if(!SREG.some(r=>r[0]===st.sreg))st.sreg='sall';
+st.region=st.kind==='s'?st.sreg:st.creg;
 if(!MODES.some(m=>m[0]===st.mode))st.mode='easy';
 let AC=null;
 function beep(ok){
@@ -564,8 +839,9 @@ function beep(ok){
       o.connect(g);g.connect(AC.destination);o.start(t0);o.stop(t0+0.22);});}catch(e){}
 }
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-function poolFor(reg){return reg==='all'?F.slice():F.filter(f=>f.r===reg);}
-function regName(reg){return(REG.find(r=>r[0]===reg)||REG[0])[1];}
+function poolFor(reg){return reg==='all'?F.filter(f=>!SR.includes(f.r)):reg==='sall'?F.filter(f=>SR.includes(f.r)):F.filter(f=>f.r===reg);}
+function regName(reg){return(REG.concat(SREG).find(r=>r[0]===reg)||REG[0])[1];}
+function qText(){const r=st.region;return r==='us'?'Якого штату цей пиріг? 🥧':r==='de'?'Якої землі цей пиріг? 🥧':r==='uk'||r==='nd'?'Якого регіону цей пиріг? 🥧':r==='sall'?'Чий це пиріг? 🥧':'Якої країни цей пиріг? 🥧';}
 function show(id){['home','game','end','album'].forEach(s=>$(s).classList.toggle('hidden',s!==id));window.scrollTo(0,0);}
 function pieSize(){return Math.max(200,Math.min(330,document.querySelector('.wrap').clientWidth-32));}
 
@@ -583,8 +859,12 @@ function renderBest(){
   const best=load('best',{}),k=st.region+'|'+st.mode,n=Math.min(10,poolFor(st.region).length);
   $('bestLine').textContent=best[k]!=null?('Твій рекорд тут: '+best[k]+' з '+n+' ⭐'):flagsWait(poolFor(st.region).length);
 }
+function renderRegChips(){
+  chips($('regChips'),st.kind==='s'?SREG:REG,st.region,k=>{st.region=k;if(st.kind==='s'){st.sreg=k;save('sregion',k);}else{st.creg=k;save('region',k);}});
+}
 function renderHome(){
-  chips($('regChips'),REG,st.region,k=>{st.region=k;save('region',k);});
+  chips($('kindChips'),KINDS,st.kind,k=>{st.kind=k;save('kind',k);st.region=k==='s'?st.sreg:st.creg;renderRegChips();});
+  renderRegChips();
   chips($('modeChips'),MODES,st.mode,k=>{st.mode=k;save('mode',k);});
   renderBest();
   const ua=F[0];drawPie($('demoPie'),ua,130,true);$('demoFlag').innerHTML='';$('demoFlag').appendChild(flagCanvas(ua,110));
@@ -594,17 +874,17 @@ function renderHome(){
 function makeOpts(a,pool){
   const ok=g=>g!==a&&!confusable(a,g);
   let cand=shuffle(pool.filter(ok));
-  if(cand.length<3)cand=cand.concat(shuffle(F.filter(g=>ok(g)&&!cand.includes(g))));
+  if(cand.length<3)cand=cand.concat(shuffle(F.filter(g=>ok(g)&&!cand.includes(g)&&SR.includes(g.r)===SR.includes(a.r))));
   return shuffle([a].concat(cand.slice(0,3)));
 }
 function startGame(){
-  const pool=poolFor(st.region);F.forEach(pie);
+  const pool=poolFor(st.region);pool.forEach(pie);
   st.qs=shuffle(pool).slice(0,Math.min(10,pool.length)).map(a=>({a,opts:makeOpts(a,pool)}));
   st.i=0;st.score=0;st.hints=HINTS;st.hintsUsed=0;show('game');renderQ();
 }
 function renderQ(){
   const q=st.qs[st.i];st.answered=false;st.hinted=false;
-  $('prog').textContent=(st.i+1)+' / '+st.qs.length;$('score').textContent='⭐ '+st.score;
+  $('qText').textContent=qText();$('prog').textContent=(st.i+1)+' / '+st.qs.length;$('score').textContent='⭐ '+st.score;
   $('barFill').style.width=(st.i/st.qs.length*100)+'%';
   drawPie($('pie'),q.a,pieSize(),true);
   const box=$('opts');box.innerHTML='';
